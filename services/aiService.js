@@ -1,21 +1,22 @@
-const { Configuration, OpenAIApi } = require('openai');
+const axios = require('axios');
 
-// Initialize the OpenAI configuration with your API key
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-const openai = new OpenAIApi(configuration);
-
-// Function to generate a response from OpenAI
 const generateResponse = async (prompt) => {
   try {
-    const completion = await openai.createCompletion({
-      model: 'text-davinci-003',
-      prompt: prompt,
-      max_tokens: 150,
-    });
-    return completion.data.choices[0].text.trim();
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 150,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+      }
+    );
+    return response.data.choices[0].message.content.trim();
   } catch (error) {
     console.error('Error generating response:', error);
     throw error;
