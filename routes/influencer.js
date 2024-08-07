@@ -122,7 +122,7 @@ router.post('/upload-data', ensureAuth, upload.single('file'), async (req, res) 
 router.post('/generate-response', ensureAuth, async (req, res) => {
   const { prompt } = req.body;
   try {
-    const response = await generateResponse(req.user, req.user, prompt);
+    const response = await generateResponse(prompt);
     res.json({ response });
   } catch (err) {
     console.error(err.message);
@@ -131,16 +131,22 @@ router.post('/generate-response', ensureAuth, async (req, res) => {
 });
 
 // Set Up Stripe Payouts
-router.post('/setup-payouts', ensureAuth, async (req, res) => {
-  const { payoutInfo } = req.body;
+router.post('/stripe-setup', ensureAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    user.payoutInfo = payoutInfo;
-    await user.save();
-    res.json({ message: 'Payout information set up' });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    const account = await stripe.accounts.create({
+      type: 'express',
+      email: req.user.email,
+    });
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id,
+      refresh_url: 'https://connefluence.com/reauth',
+      return_url: 'https://connefluence.com/influencer/signup',
+      type: 'account_onboarding',
+    });
+    res.json({ url: accountLink.url });
+  } catch (error) {
+    console.error('Error setting up Stripe', error);
+    res.status(500).send('Stripe setup failed');
   }
 });
 

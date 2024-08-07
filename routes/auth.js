@@ -2,28 +2,28 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 
-router.post('/influencer/login', passport.authenticate('local'), (req, res) => {
-  res.redirect(`/influencer/${req.user.username}`);
+// Google OAuth
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email', 'https://www.googleapis.com/auth/youtube.readonly'] }));
+router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
+  res.redirect('/influencer/signup');
 });
 
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/auth/login' }), (req, res) => {
-  res.redirect(`/influencer/${req.user.username}`);
-});
-
+// Instagram OAuth
 router.get('/instagram', passport.authenticate('instagram'));
-router.get('/instagram/callback', passport.authenticate('instagram', { failureRedirect: '/auth/login' }), (req, res) => {
-  res.redirect(`/influencer/${req.user.username}`);
+router.get('/instagram/callback', passport.authenticate('instagram', { failureRedirect: '/' }), (req, res) => {
+  res.redirect('/influencer/signup');
 });
 
-router.get('/tiktok', passport.authenticate('tiktok'));
-router.get('/tiktok/callback', passport.authenticate('tiktok', { failureRedirect: '/auth/login' }), (req, res) => {
-  res.redirect(`/influencer/${req.user.username}`);
-});
-
+// Twitter OAuth
 router.get('/twitter', passport.authenticate('twitter'));
-router.get('/twitter/callback', passport.authenticate('twitter', { failureRedirect: '/auth/login' }), (req, res) => {
-  res.redirect(`/influencer/${req.user.username}`);
+router.get('/twitter/callback', passport.authenticate('twitter', { failureRedirect: '/' }), (req, res) => {
+  res.redirect('/influencer/signup');
+});
+
+// TikTok OAuth
+router.get('/tiktok', passport.authenticate('tiktok'));
+router.get('/tiktok/callback', passport.authenticate('tiktok', { failureRedirect: '/' }), (req, res) => {
+  res.redirect('/influencer/signup');
 });
 
 module.exports = router;
