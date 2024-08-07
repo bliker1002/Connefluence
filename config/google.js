@@ -4,7 +4,9 @@ const User = require('../models/User');
 module.exports = new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'https://connefluence.com/auth/google/callback',
+  callbackURL: process.env.NODE_ENV === 'production' 
+    ? 'https://connefluence.com/auth/google/callback'
+    : 'http://localhost:3000/auth/google/callback',
   scope: ['profile', 'email', 'https://www.googleapis.com/auth/youtube.readonly']
 },
 async (accessToken, refreshToken, profile, done) => {
