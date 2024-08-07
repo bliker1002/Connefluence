@@ -12,7 +12,7 @@ const passport = require('./config/passport'); // Adjust the path if necessary
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000; // Change the port to 5000
+const PORT = process.env.PORT || 5000; // Ensure the port is 5000
 
 app.use(bodyParser.json());
 
