@@ -4,9 +4,12 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const dotenv = require('dotenv');
 const path = require('path');
+const passport = require('./config/passport');
+const fs = require('fs');
 const twilio = require('twilio');
-const stripe = require('stripe');
-const passport = require('./config/passport'); // Adjust the path if necessary
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const User = require('./models/User');
+const aiService = require('./services/aiService');
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +18,7 @@ const app = express();
 const PORT = process.env.PORT || 5000; // Ensure the port is 5000
 
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Session Middleware
 app.use(session({
@@ -36,6 +40,32 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
     console.error('Failed to connect to MongoDB', err);
   });
 
+// Directories to create
+const directories = [
+  path.join(__dirname, 'uploads'),
+  path.join(__dirname, 'data/influencers'),
+  path.join(__dirname, 'data/users')
+];
+
+// Create directories if they don't exist
+directories.forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Auth Routes
+const authRoutes = require('./routes/auth');
+app.use('/auth', authRoutes);
+
+// Influencer Routes
+const influencerRoutes = require('./routes/influencer');
+app.use('/api/influencer', influencerRoutes);
+
+// User Routes
+const userRoutes = require('./routes/user');
+app.use('/api/user', userRoutes);
+
 // Twilio setup
 const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 
@@ -53,37 +83,32 @@ const sendMessage = async (to, body) => {
   }
 };
 
-// Stripe setup
-const stripeClient = stripe(process.env.STRIPE_SECRET_KEY);
+// Endpoint to handle incoming messages from Twilio
+app.post('/webhook/twilio', async (req, res) => {
+  const { From, Body } = req.body;
 
-// Function to create a Stripe payment link
-const createPaymentLink = async (amount, currency = 'usd') => {
   try {
-    const paymentLink = await stripeClient.paymentLinks.create({
-      line_items: [{
-        price_data: {
-          currency,
-          product_data: {
-            name: 'Message Pack',
-          },
-          unit_amount: amount,
-        },
-        quantity: 1,
-      }],
-    });
-    return paymentLink.url;
+    const user = await User.findOne({ phone: From });
+    if (!user) {
+      res.status(404).send('User not found');
+      return;
+    }
+
+    const influencer = await User.findById(user.influencerId);
+    if (!influencer) {
+      res.status(404).send('Influencer not found');
+      return;
+    }
+
+    const response = await aiService.generateResponse(influencer, user, Body);
+    await sendMessage(From, response);
+
+    res.status(200).send('Message processed');
   } catch (error) {
-    console.error('Error creating payment link:', error);
+    console.error('Error processing message', error);
+    res.status(500).send('Server error');
   }
-};
-
-// Auth Routes
-const authRoutes = require('./routes/auth');
-app.use('/auth', authRoutes);
-
-// Influencer Routes
-const influencerRoutes = require('./routes/influencer');
-app.use('/api/influencer', influencerRoutes);
+});
 
 // Serve static files from the React frontend app
 app.use(express.static(path.join(__dirname, 'frontend/build')));

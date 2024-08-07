@@ -9,22 +9,32 @@ module.exports = new GoogleStrategy({
     : 'http://localhost:3000/auth/google/callback',
   scope: ['profile', 'email', 'https://www.googleapis.com/auth/youtube.readonly']
 },
-async (accessToken, refreshToken, profile, done) => {
-  try {
-    let user = await User.findOne({ googleId: profile.id });
-    if (!user) {
-      user = new User({
-        googleId: profile.id,
-        name: profile.displayName,
-        email: profile.emails[0].value,
-        socialMedia: { youtube: profile._json }
-      });
-      await user.save();
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      let user = await User.findOne({ googleId: profile.id });
+      if (!user) {
+        user = new User({
+          googleId: profile.id,
+          name: profile.displayName,
+          email: profile.emails[0].value,
+          avatar: profile.photos[0].value
+        });
+        await user.save();
+      }
+      done(null, user);
+    } catch (error) {
+      done(error, false, error.message);
     }
-    user.googleAccessToken = accessToken;
-    await user.save();
-    done(null, user);
-  } catch (err) {
-    done(err, false, err.message);
   }
+));
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
 });
+
+passport.deserializeUser((id, done) => {
+  User.findById(id, (err, user) => {
+    done(err, user);
+  });
+});
+

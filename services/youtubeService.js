@@ -1,29 +1,21 @@
 const { google } = require('googleapis');
-const User = require('../models/User');
 
-const youtube = google.youtube({
-  version: 'v3',
-  auth: process.env.GOOGLE_API_KEY // Use API Key for public data or OAuth token for private data
-});
-
-async function fetchYouTubeData(userId) {
-  try {
-    const user = await User.findById(userId);
-    if (!user || !user.googleAccessToken) {
-      throw new Error('User not authenticated with Google');
+const youtubeService = {
+  async fetchProfileData(accessToken) {
+    try {
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({ access_token: accessToken });
+      const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
+      const response = await youtube.channels.list({
+        part: 'snippet,contentDetails,statistics',
+        mine: true
+      });
+      return response.data.items[0];
+    } catch (error) {
+      console.error('Error fetching YouTube profile data', error);
+      throw new Error('Failed to fetch YouTube profile data');
     }
-
-    const response = await youtube.channels.list({
-      part: 'snippet,contentDetails,statistics',
-      mine: true,
-      access_token: user.googleAccessToken // Use OAuth token
-    });
-
-    return response.data.items;
-  } catch (error) {
-    console.error('Error fetching YouTube data:', error);
-    throw error;
   }
-}
+};
 
-module.exports = { fetchYouTubeData };
+module.exports = youtubeService;
