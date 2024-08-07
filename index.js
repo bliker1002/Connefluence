@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const dotenv = require('dotenv');
+const path = require('path');
 const twilio = require('twilio');
 const stripe = require('stripe');
 const passport = require('./config/passport'); // Adjust the path if necessary
@@ -11,7 +12,7 @@ const passport = require('./config/passport'); // Adjust the path if necessary
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000; // Change the port to 5000
 
 app.use(bodyParser.json());
 
@@ -83,6 +84,14 @@ app.use('/auth', authRoutes);
 // Influencer Routes
 const influencerRoutes = require('./routes/influencer');
 app.use('/api/influencer', influencerRoutes);
+
+// Serve static files from the React frontend app
+app.use(express.static(path.join(__dirname, 'frontend/build')));
+
+// Serve the React frontend app for any other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
+});
 
 // Basic Route
 app.get('/', (req, res) => {
