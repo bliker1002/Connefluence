@@ -92,7 +92,7 @@ router.post('/setup-payouts', ensureAuth, async (req, res) => {
 router.post('/generate-link', ensureAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    const uniqueLink = `https://yourdomain.com/chat/${user._id}`;
+    const uniqueLink = `https://connefluence.com/chat/${user._id}`;
     user.uniqueLink = uniqueLink;
     await user.save();
     res.json({ uniqueLink });

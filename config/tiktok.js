@@ -4,16 +4,20 @@ const User = require('../models/User');
 module.exports = new TikTokStrategy({
   clientID: process.env.TIKTOK_CLIENT_KEY,
   clientSecret: process.env.TIKTOK_CLIENT_SECRET,
-  callbackURL: '/auth/tiktok/callback',
+  callbackURL: 'https://connefluence.com/auth/tiktok/callback',
   profileURL: 'https://open-api.tiktok.com/platform/oauth/userinfo/'
 },
 async (accessToken, refreshToken, profile, done) => {
   try {
-    let user = await User.findById(profile.id);
+    let user = await User.findOne({ tiktokId: profile.id });
     if (!user) {
-      return done(new Error('User not found'));
+      user = new User({
+        tiktokId: profile.id,
+        name: profile.displayName,
+        socialMedia: { tiktok: profile }
+      });
+      await user.save();
     }
-    user.tiktokId = profile.id;
     user.tiktokAccessToken = accessToken;
     await user.save();
     done(null, user);

@@ -4,15 +4,19 @@ const User = require('../models/User');
 module.exports = new InstagramStrategy({
   clientID: process.env.INSTAGRAM_CLIENT_ID,
   clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
-  callbackURL: '/auth/instagram/callback'
+  callbackURL: 'https://connefluence.com/auth/instagram/callback'
 },
 async (accessToken, refreshToken, profile, done) => {
   try {
-    let user = await User.findById(profile.id);
+    let user = await User.findOne({ instagramId: profile.id });
     if (!user) {
-      return done(new Error('User not found'));
+      user = new User({
+        instagramId: profile.id,
+        name: profile.displayName,
+        socialMedia: { instagram: profile._json.data }
+      });
+      await user.save();
     }
-    user.instagramId = profile.id;
     user.instagramAccessToken = accessToken;
     await user.save();
     done(null, user);
