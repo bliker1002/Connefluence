@@ -1,20 +1,20 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
+const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { ensureAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Register
+// Registration route
 router.post('/register', async (req, res) => {
-  const { name, email, phone, password } = req.body;
+  const { email, password } = req.body;
   try {
     let user = await User.findOne({ email });
     if (user) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ msg: 'User already exists' });
     }
-    user = new User({ name, email, phone, password });
+
+    user = new User({ email, password });
     await user.save();
     const payload = { user: { id: user.id } };
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
@@ -27,18 +27,20 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login
+// Login route
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
-    let user = await User.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ msg: 'Invalid credentials' });
     }
-    const isMatch = await bcrypt.compare(password, user.password);
+
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ msg: 'Invalid credentials' });
     }
+
     const payload = { user: { id: user.id } };
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
       if (err) throw err;
@@ -50,7 +52,12 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Middleware to protect routes
-router.use(ensureAuth);
+// Google OAuth route
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email', 'https://www.googleapis.com/auth/youtube.readonly'] }));
+
+// Google OAuth callback route
+router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
+  res.redirect('/profile');
+});
 
 module.exports = router;
