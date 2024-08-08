@@ -6,6 +6,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const passport = require('./config/passport');
 const fs = require('fs');
+const helmet = require('helmet');
+const cors = require('cors');
 const twilio = require('twilio');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('./models/User');
@@ -20,11 +22,38 @@ const PORT = process.env.PORT || 5000; // Ensure the port is 5000
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Use Helmet to set security headers, including CSP
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com", "https://js.stripe.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://*.stripe.com"],
+      connectSrc: ["'self'", "https://api.stripe.com", "https://accounts.google.com", "https://www.googleapis.com"],
+      frameSrc: ["'self'", "https://js.stripe.com"],
+    },
+  },
+}));
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: 'http://localhost:3000', // Adjust this to match your frontend URL
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  allowedHeaders: 'Content-Type,Authorization'
+}));
+
 // Session Middleware
 app.use(session({
   secret: 'secret',
   resave: true,
-  saveUninitialized: true
+  saveUninitialized: true,
+  cookie: {
+    sameSite: 'None', // Set SameSite attribute
+    secure: true // Ensure cookies are only sent over HTTPS
+  }
 }));
 
 // Passport Middleware
