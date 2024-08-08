@@ -13,7 +13,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('./models/User');
 const aiService = require('./services/aiService');
 
-// Load environment variables
+// Load environment variables at the beginning
 dotenv.config();
 
 const app = express();

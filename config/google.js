@@ -26,7 +26,7 @@ module.exports = new GoogleStrategy({
       done(error, false, error.message);
     }
   }
-));
+);
 
 passport.serializeUser((user, done) => {
   done(null, user.id);
